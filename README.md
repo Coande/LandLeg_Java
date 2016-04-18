@@ -1,59 +1,59 @@
-# ���ȣ�LandLeg�� Java��
-LandLeg Java��͵�����������汾�Ǹ���**XenK0u**�ĵ���php����ֲ����ǿ�ģ��ҳ���л**XenK0u**��
+# 地腿（LandLeg） Java版
+LandLeg Java版低调发布，这个版本是根据**XenK0u**的[地腿php版](https://github.com/xfkencon/land-leg)移植并增强的，灰常感谢**XenK0u**。
 
 ![LandLeg v1.0](http://i4.piimg.com/784942f4ae3c4657.png)
 
-## ������ɶ��
-\*��\*��\*��\*��\*�������ͻ��ˡ�WiFi����ʲô������ô�þ���ô�ã���¼һ�Σ�����ʱ��֮�ڿ�ֱ��������
+## 地腿是啥？
+\*天\*翼\*宽\*带\*第三方客户端。WiFi共享什么的想怎么用就怎么用；登录一次，若干时间之内可直接上网。
 
 ---
-## LandLeg Java�� v1.0
-### ����
-- \*��\*��\*��������������ģ�
-- �ֻ�Э�飬�ô����
-- �߼������Լ�����
+## LandLeg Java版 v1.0
+### 功能
+- \*电\*信\*拨号上网（必须的）
+- 手机协议，好处多多
+- 高级功能自己发掘
 
-### �˰汾��**XenK0u**��php�汾�����Ͻ�����һЩ��ǿ��
-- ��û���������ļ�����д�ͻ���ip�����Զ���ȡ
-- ��û���������ļ�����д�ͻ���mac�����Զ���ȡ
-- ��û���������ļ�����дnasip�����Զ���ȡ
-- ά������ʱ�������ӵ������ļ����������
-- �����˳���¼���ܣ��������~
+### 此版本在**XenK0u**的php版本基础上进行了一些增强：
+- 若没有在配置文件中填写客户端ip，则自动获取
+- 若没有在配置文件中填写客户端mac，则自动获取
+- 若没有在配置文件中填写nasip，则自动获取
+- 维持连接时间间隔添加到配置文件，方便更改
+- 添加退出登录功能，方便测试~
 
-### ��ʹ��˵��
-- ���ȣ���ȷ����Java���л�����û�о�ȥ[���ذ�װ](http://www.java.com/zh_CN/)��
-- ��`account.properties`����д�����˺š�����
-- ��`��¼.bat`�������ڴ�����ʾ��¼�ɹ��Ϳ��������ˡ��ڴ��ڿ��Թرգ����ǹرպ�ɶʱ������Ͳ�֪���ˣ�һֱ���ſ��Ա������ӡ�
-- ĳЩ���������Ҫ�����ģ����Դ�`�ǳ�.bat`���˳���¼��
+### 简单使用说明
+- 首先，得确保有Java运行环境。没有就去[下载安装](http://www.java.com/zh_CN/)。
+- 在`account.properties`中填写宽带账号、密码
+- 打开`登录.bat`。弹出黑窗口提示登录成功就可以上网了。黑窗口可以关闭，但是关闭后啥时候断网就不知道了，一直开着可以保持连接。
+- 某些特殊情况需要断网的，可以打开`登出.bat`来退出登录。
 
-### �߼�ʹ��˵��
-- �޸�`account.properties`�ļ��е��������ã�������Ȼ����
+### 高级使用说明
+- 修改`account.properties`文件中的其它配置，高手自然懂。
 
-### �����ļ��޸�˵��
->\# v1.0���޸�`account.properties`�ļ���v1.1���޸�`config.txt`�ļ�
-\# �����˺ţ����
-username=12345678910
-\# �������루���
-password=12345678
-\# ��������������� IP ��ַ��ѡ������ܹ��Զ���ȡ��
-nasip= 
-\# �ͻ��� IP ��ַ��ѡ������ܹ��Զ���ȡ��
-clientip= 
-\# �ͻ��� MAC ��ַ��ѡ������ܹ��Զ���ȡ��
-mac=
-\# ά������������ʱ�����������Ĭ��30���ɣ���λ�����ӣ�
-time=30
+### 配置文件修改说明
+>\# v1.0版修改`account.properties`文件，v1.1版修改`config.txt`文件  
+\# 宽带账号（必填）  
+username=12345678910  
+\# 宽带密码（必填）  
+password=12345678  
+\# 宽带接入服务器的 IP 地址（选填，程序能够自动获取）  
+nasip=  
+\# 客户端 IP 地址（选填，程序能够自动获取）  
+clientip=  
+\# 客户端 MAC 地址（选填，程序能够自动获取）  
+mac=  
+\# 维持连接请求发送时间间隔（必填，但默认30即可，单位：分钟）  
+time=30  
 
 
-### ����
-�����ڵ�¼�ɹ�ʱ���ᷢ��һ�������ҵķ��������м�Ҫͳ�ƣ������md5���ܺ��mac��ַ�����ڳ�����Ϣ��ϣ����Ҫ�������_��
+### 其它
+程序在登录成功时，会发送一个请求到我的服务器进行简要统计，会带上md5加密后的mac地址和所在城市信息，希望不要介意哈∩_∩
 
 ---
-## LandLeg Java�� v1.1    2016/4/18����
-- ����һ����jre�İ汾���������Լ�����Java���л���������ֱ��ʹ�ã�������Ƚϴ��㶮�ġ�
-- �����ļ�������`account.properties`����Ϊ`config.txt`������С�׽����޸ġ�_����
-- �����ӡ������Ϣ�����Զ���ȡ��ip��ַ��Ϣ�����ڲ����
+## LandLeg Java版 v1.1    2016/4/18更新
+- 附上一个带jre的版本，即不用自己配置Java运行环境，可以直接使用，但体积比较大，你懂的。
+- 配置文件名称由`account.properties`更改为`config.txt`，便于小白进行修改←_←。
+- 程序打印更多信息，如自动获取的ip地址信息，便于查错。
 
 ---
 ## License
-- AGPL V3
+- I don't know.
