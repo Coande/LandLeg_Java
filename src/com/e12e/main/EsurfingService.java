@@ -6,19 +6,26 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetAddress;
+import java.net.SocketException;
 import java.net.URL;
+import java.net.URLEncoder;
+import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.Properties;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import org.json.JSONObject;
 
 import com.e12e.utils.AddressUtil;
 import com.e12e.utils.HttpUtil;
 import com.e12e.utils.MD5Util;
-import com.e12e.utils.PrintPrefix;
+import com.e12e.utils.PrintUtil;
 
 public class EsurfingService {
 	String username;
+	String password;
+	String isauto;
 	String clientip;
 	String nasip;
 	String mac;
@@ -26,62 +33,104 @@ public class EsurfingService {
 	String secret = "Eshore!@#";
 	String iswifi = "4060";
 
-	String password;
 	String md5String;
 	String url;
 
 	Properties properties;
 	String activeTime;
-	String configFile="config.txt";
+	String configFile = "config.ini";
+	String debugConfig = "debug.dat";
 
-	public EsurfingService() throws IOException {
-		properties = new Properties();
-		FileInputStream fileInputStream = new FileInputStream(
-				configFile);
-		properties.load(fileInputStream);
-		username = properties.getProperty("username");
-
-		clientip = properties.getProperty("clientip");
-		InetAddress ia = null;
-		if ("".equals(clientip)) {
-			ia = InetAddress.getLocalHost();
-			clientip = ia.getHostAddress();
-			setNewProperties("clientip", clientip);
-			System.out.println(PrintPrefix.print()+"自动获取到本机IP地址："+clientip);
-		}
-		
-		nasip = properties.getProperty("nasip");
-		if("".equals(nasip)){
+/**
+ * 初始化客户端信息（isInit为true的话）
+ * @param isInit 是否需要初始化客户端信息
+ * @throws Exception
+ */
+	public EsurfingService(boolean isInit) throws Exception{
+		if(isInit){
+			properties = new Properties();
+			FileInputStream fileInputStream;
 			try {
-				nasip=getNASIP();
-				if(nasip!=null){
-					setNewProperties("nasip", nasip);
-					System.out.println(PrintPrefix.print()+"自动获取到NASIP地址："+nasip);
-				}else {
-					System.out.println(PrintPrefix.print()+"自动获取到NASIP失败！");
-				}
-				
-			} catch (Exception e) {
-				System.out.println(PrintPrefix.print()+"自动获取NASIP地址出现异常！");
-				e.printStackTrace();
+				fileInputStream = new FileInputStream(configFile);
+				properties.load(fileInputStream);
+			} catch (Exception e1) {
+				throw new Exception("获取配置时出现异常！");
+			}
+			username = properties.getProperty("username");
+			password = properties.getProperty("password");
+
+			// 获取是否设置每次自动获取IP地址
+			isauto = properties.getProperty("isauto");
+
+			if ("1".equals(isauto)) {
+				autoGetInfo();
+			} else {
+				/*
+				 * 手动设置各参数
+				 */
+				System.out.println("小提示：当前为手动设置客户端参数");
+				nasip = properties.getProperty("nasip");
+				clientip = properties.getProperty("clientip");
+				mac = properties.getProperty("mac");
+				activeTime = properties.getProperty("time");
+			}
+
+			// 关闭资源
+			try {
+				fileInputStream.close();
+			} catch (IOException e) {
+				System.out.println(PrintUtil.printPrefix() +"内部异常！");
 			}
 		}
-		
-		mac = properties.getProperty("mac");
-		if ("".equals(mac)) {
-			ia = InetAddress.getLocalHost();
-			mac = AddressUtil.getLocalMac(ia);
-			setNewProperties("mac", mac);
-			System.out.println(PrintPrefix.print()+"自动获取到本机MAC地址："+mac);
+	}
+	
+	
+	/**
+	 * 自动获取客户端信息
+	 * @throws Exception 对应的Exception，e.getMessage()即可获得对应的错误信息
+	 */
+	public void autoGetInfo() throws Exception{
+		/*
+		 * 自动获取各参数信息
+		 */
+		System.out.println("小提示：当前为自动设置客户端参数");
+		// 自动获取NASIP地址
+		try {
+			nasip = getNASIP();
+		} catch (Exception e) {
+			// 抛出异常以终止运行
+			throw new Exception(PrintUtil.printPrefix() +"自动获取NASIP时异常！");
+		}
+		if (nasip == null) {
+			// 抛出异常以终止运行
+			throw new Exception(PrintUtil.printPrefix() + "自动获取NASIP失败！");
+		} else {
+			System.out.println(PrintUtil.printPrefix() +"自动获取到NASIP地址："
+					+ nasip);
 		}
 
-		password = properties.getProperty("password");
+		// 自动获取当前电脑的IP
+		InetAddress ia;
+		try {
+			ia = InetAddress.getLocalHost();
+		} catch (UnknownHostException e) {
+			throw new Exception(PrintUtil.printPrefix() +"获取本机IP地址时出现异常！");
+		}
+		clientip = ia.getHostAddress();
+		System.out.println(PrintUtil.printPrefix() +"自动获取到本机IP地址：" + clientip);
 
-		activeTime = properties.getProperty("time");
+		// 自动获取mac地址
+		try {
+			mac = AddressUtil.getLocalMac(ia);
+		} catch (SocketException e) {
+			throw new Exception(PrintUtil.printPrefix() +"获取本机MAC地址时出现异常！");
+		}
+		System.out.println(PrintUtil.printPrefix() +"自动获取到本机MAC地址：" + mac);
 
-		// 关闭资源
-		fileInputStream.close();
+		// 设置默认的维持连接时间为15分钟
+		activeTime = "15";
 	}
+	
 
 	/**
 	 * 得到登录时需要的验证码数据
@@ -143,14 +192,25 @@ public class EsurfingService {
 	 * @throws Exception
 	 */
 	public String doLogout() throws Exception {
+		// 获取上次登录的信息
+		Properties properties = new Properties();
+		FileInputStream fileInputStream = new FileInputStream(debugConfig);
+
+		properties.load(fileInputStream);
+		String lastnasip = properties.getProperty("lastnasip");
+		String lastclientip = properties.getProperty("lastclientip");
+		String lastmac = properties.getProperty("lastmac");
+		fileInputStream.close();
+
 		url = "http://enet.10000.gd.cn:10001/client/logout";
 		timestamp = System.currentTimeMillis() + "";
-		md5String = MD5Util.MD5(clientip + nasip + mac + timestamp + secret);
+		md5String = MD5Util.MD5(lastclientip + lastnasip + lastmac + timestamp
+				+ secret);
 
 		JSONObject jsonObject = new JSONObject();
-		jsonObject.put("clientip", clientip);
-		jsonObject.put("nasip", nasip);
-		jsonObject.put("mac", mac);
+		jsonObject.put("clientip", lastclientip);
+		jsonObject.put("nasip", lastnasip);
+		jsonObject.put("mac", lastmac);
 		jsonObject.put("timestamp", timestamp);
 		jsonObject.put("authenticator", md5String);
 
@@ -160,17 +220,55 @@ public class EsurfingService {
 	}
 
 	/**
+	 * 维持连接的处理
+	 */
+	public void doActive() {
+
+		int activeTimeInt = Integer.parseInt(activeTime);
+
+		TimerTask timerTask = new TimerTask() {
+			String activeString;
+			JSONObject jsonObject;
+			String rescode;
+
+			@Override
+			public void run() {
+				try {
+					activeString = EsurfingService.this.keepConnection();
+					jsonObject = new JSONObject(activeString);
+					rescode = (String) jsonObject.opt("rescode");
+					if ("0".equals(rescode)) {
+						System.out.println(PrintUtil.printPrefix() + "维持连接成功！");
+					} else {
+						String resinfo = jsonObject.optString("resinfo");
+						System.out.println(PrintUtil.printPrefix() + "维持连接失败："
+								+ resinfo);
+						return;
+					}
+				} catch (Exception e) {
+					System.out.println(PrintUtil.printPrefix() + "维持连接时出现异常！");
+					// e.printStackTrace();
+					return;
+				}
+			}
+		};
+
+		Timer timer = new Timer();
+		timer.schedule(timerTask, activeTimeInt*60000, activeTimeInt*60000);
+		//timer.schedule(timerTask, 2000, 2000);
+	}
+
+	/**
 	 * 发送维持连接请求
 	 * 
 	 * @return 返回结果
 	 * @throws Exception
 	 */
-	public String doActive() throws Exception {
+	private String keepConnection() throws Exception {
 		timestamp = System.currentTimeMillis() + "";
 		md5String = MD5Util.MD5(clientip + nasip + mac + timestamp + secret);
 		url = "http://enet.10000.gd.cn:8001/hbservice/client/active";
 
-		// 不知道为啥timestamp为null时才能通过~
 		String param = "username=" + username + "&clientip=" + clientip
 				+ "&nasip=" + nasip + "&mac=" + mac + "&timestamp=" + timestamp
 				+ "&authenticator=" + md5String;
@@ -186,10 +284,10 @@ public class EsurfingService {
 	public String getActiveTime() {
 		return this.activeTime;
 	}
-	
-	
+
 	/**
 	 * 访问百度来测试获取NASIP
+	 * 
 	 * @return 获取当地NASIP
 	 * @throws Exception
 	 */
@@ -211,23 +309,61 @@ public class EsurfingService {
 		}
 		return nasip;
 	}
-	
+
 	/**
 	 * 修改配置文件
+	 * 
 	 * @param key
 	 * @param value
 	 * @throws IOException
 	 */
-	public void setNewProperties(String key,String value) throws IOException{
-		Properties properties=new Properties();
-		InputStream inputStream=new FileInputStream(configFile);
+	private void setNewProperties(String key, String value) throws IOException {
+		Properties properties = new Properties();
+		InputStream inputStream = new FileInputStream(debugConfig);
 		properties.load(inputStream);
 		inputStream.close();
-		//在原来的数据基础上修改数据
-		OutputStream outputStream = new FileOutputStream(configFile); 
+		// 在原来的数据基础上修改数据
+		OutputStream outputStream = new FileOutputStream(debugConfig);
 		properties.setProperty(key, value);
-		properties.store(outputStream,"");
-		 outputStream.close();  
+		properties.store(outputStream, null);
+
+		outputStream.close();
+	}
+
+	/**
+	 * 登录成功后回调记录登录信息用于登出
+	 * 
+	 * @throws IOException
+	 *             properties文件操作异常
+	 */
+	public void doSetNewProperties() throws IOException {
+		setNewProperties("lastnasip", nasip);
+		setNewProperties("lastclientip", clientip);
+		setNewProperties("lastmac", mac);
+	}
+
+	/**
+	 * 顺便做个小统计，不要介意哈~~
+	 */
+	public void analytics() {
+		try {
+			String resString = HttpUtil.doGet(
+					"http://ip.taobao.com/service/getIpInfo.php", "ip=myip");
+			JSONObject jsonObject2 = new JSONObject(resString);
+			int code = jsonObject2.optInt("code");
+			String city = null;
+			if (code == 0) {
+				JSONObject jsonObject3 = (JSONObject) jsonObject2.opt("data");
+				city = (String) jsonObject3.opt("city");
+				city = URLEncoder.encode(city, "utf-8");
+				String param = "uid="
+						+ MD5Util.MD5(AddressUtil.getLocalMac(InetAddress
+								.getLocalHost())) + "&city=" + city + "&type=1";
+				HttpUtil.doGet("http://s2.e12e.com:8080/Analytics/", param);
+			}
+		} catch (Exception e) {
+			// 不要报错~~~
+		}
 	}
 
 }
