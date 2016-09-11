@@ -41,13 +41,13 @@ public class EsurfingService {
 	String configFile = "config.ini";
 	String debugConfig = "debug.dat";
 
-/**
- * 初始化客户端信息（isInit为true的话）
- * @param isInit 是否需要初始化客户端信息
- * @throws Exception
- */
-	public EsurfingService(boolean isInit) throws Exception{
-		if(isInit){
+	/**
+	 * 初始化客户端信息（isInit为true的话）
+	 * @param isInit 是否需要初始化客户端信息
+	 * @throws Exception
+	 */
+	public EsurfingService(boolean isInit) throws Exception {
+		if (isInit) {
 			properties = new Properties();
 			FileInputStream fileInputStream;
 			try {
@@ -79,17 +79,16 @@ public class EsurfingService {
 			try {
 				fileInputStream.close();
 			} catch (IOException e) {
-				System.out.println(PrintUtil.printPrefix() +"内部异常！");
+				System.out.println(PrintUtil.printPrefix() + "内部异常！");
 			}
 		}
 	}
-	
-	
+
 	/**
 	 * 自动获取客户端信息
 	 * @throws Exception 对应的Exception，e.getMessage()即可获得对应的错误信息
 	 */
-	public void autoGetInfo() throws Exception{
+	public void autoGetInfo() throws Exception {
 		/*
 		 * 自动获取各参数信息
 		 */
@@ -99,14 +98,13 @@ public class EsurfingService {
 			nasip = getNASIP();
 		} catch (Exception e) {
 			// 抛出异常以终止运行
-			throw new Exception(PrintUtil.printPrefix() +"自动获取NASIP时异常！");
+			throw new Exception(PrintUtil.printPrefix() + "自动获取NASIP时异常！");
 		}
 		if (nasip == null) {
 			// 抛出异常以终止运行
 			throw new Exception(PrintUtil.printPrefix() + "自动获取NASIP失败！");
 		} else {
-			System.out.println(PrintUtil.printPrefix() +"自动获取到NASIP地址："
-					+ nasip);
+			System.out.println(PrintUtil.printPrefix() + "自动获取到NASIP地址：" + nasip);
 		}
 
 		// 自动获取当前电脑的IP
@@ -114,23 +112,22 @@ public class EsurfingService {
 		try {
 			ia = InetAddress.getLocalHost();
 		} catch (UnknownHostException e) {
-			throw new Exception(PrintUtil.printPrefix() +"获取本机IP地址时出现异常！");
+			throw new Exception(PrintUtil.printPrefix() + "获取本机IP地址时出现异常！");
 		}
 		clientip = ia.getHostAddress();
-		System.out.println(PrintUtil.printPrefix() +"自动获取到本机IP地址：" + clientip);
+		System.out.println(PrintUtil.printPrefix() + "自动获取到本机IP地址：" + clientip);
 
 		// 自动获取mac地址
 		try {
 			mac = AddressUtil.getLocalMac(ia);
 		} catch (SocketException e) {
-			throw new Exception(PrintUtil.printPrefix() +"获取本机MAC地址时出现异常！");
+			throw new Exception(PrintUtil.printPrefix() + "获取本机MAC地址时出现异常！");
 		}
-		System.out.println(PrintUtil.printPrefix() +"自动获取到本机MAC地址：" + mac);
+		System.out.println(PrintUtil.printPrefix() + "自动获取到本机MAC地址：" + mac);
 
 		// 设置默认的维持连接时间为15分钟
 		activeTime = "15";
 	}
-	
 
 	/**
 	 * 得到登录时需要的验证码数据
@@ -166,8 +163,7 @@ public class EsurfingService {
 	public String doLogin(String verifyCode) throws Exception {
 		url = "http://enet.10000.gd.cn:10001/client/login";
 		timestamp = System.currentTimeMillis() + "";
-		md5String = MD5Util.MD5(clientip + nasip + mac + timestamp + verifyCode
-				+ secret);
+		md5String = MD5Util.MD5(clientip + nasip + mac + timestamp + verifyCode + secret);
 
 		JSONObject jsonObject = new JSONObject();
 		jsonObject.put("username", username);
@@ -204,8 +200,7 @@ public class EsurfingService {
 
 		url = "http://enet.10000.gd.cn:10001/client/logout";
 		timestamp = System.currentTimeMillis() + "";
-		md5String = MD5Util.MD5(lastclientip + lastnasip + lastmac + timestamp
-				+ secret);
+		md5String = MD5Util.MD5(lastclientip + lastnasip + lastmac + timestamp + secret);
 
 		JSONObject jsonObject = new JSONObject();
 		jsonObject.put("clientip", lastclientip);
@@ -241,21 +236,22 @@ public class EsurfingService {
 						System.out.println(PrintUtil.printPrefix() + "维持连接成功！");
 					} else {
 						String resinfo = jsonObject.optString("resinfo");
-						System.out.println(PrintUtil.printPrefix() + "维持连接失败："
-								+ resinfo);
-						return;
+						System.out.println(PrintUtil.printPrefix() + "维持连接失败：" + resinfo);
+						reConnect();
 					}
 				} catch (Exception e) {
 					System.out.println(PrintUtil.printPrefix() + "维持连接时出现异常！");
-					// e.printStackTrace();
+					// 停止执行定时任务
+					this.cancel();
+					reConnect();
 					return;
 				}
 			}
 		};
 
 		Timer timer = new Timer();
-		timer.schedule(timerTask, activeTimeInt*60000, activeTimeInt*60000);
-		//timer.schedule(timerTask, 2000, 2000);
+		timer.schedule(timerTask, activeTimeInt * 60000, activeTimeInt * 60000);
+		// timer.schedule(timerTask, 2000, 2000);
 	}
 
 	/**
@@ -269,9 +265,8 @@ public class EsurfingService {
 		md5String = MD5Util.MD5(clientip + nasip + mac + timestamp + secret);
 		url = "http://enet.10000.gd.cn:8001/hbservice/client/active";
 
-		String param = "username=" + username + "&clientip=" + clientip
-				+ "&nasip=" + nasip + "&mac=" + mac + "&timestamp=" + timestamp
-				+ "&authenticator=" + md5String;
+		String param = "username=" + username + "&clientip=" + clientip + "&nasip=" + nasip + "&mac=" + mac + "&timestamp=" + timestamp + "&authenticator="
+				+ md5String;
 		String activeString = HttpUtil.doGet(url, param);
 		return activeString;
 	}
@@ -347,8 +342,7 @@ public class EsurfingService {
 	 */
 	public void analytics() {
 		try {
-			String resString = HttpUtil.doGet(
-					"http://ip.taobao.com/service/getIpInfo.php", "ip=myip");
+			String resString = HttpUtil.doGet("http://ip.taobao.com/service/getIpInfo.php", "ip=myip");
 			JSONObject jsonObject2 = new JSONObject(resString);
 			int code = jsonObject2.optInt("code");
 			String city = null;
@@ -356,13 +350,33 @@ public class EsurfingService {
 				JSONObject jsonObject3 = (JSONObject) jsonObject2.opt("data");
 				city = (String) jsonObject3.opt("city");
 				city = URLEncoder.encode(city, "utf-8");
-				String param = "uid="
-						+ MD5Util.MD5(AddressUtil.getLocalMac(InetAddress
-								.getLocalHost())) + "&city=" + city + "&type=1";
+				String param = "uid=" + MD5Util.MD5(AddressUtil.getLocalMac(InetAddress.getLocalHost())) + "&city=" + city + "&type=1";
 				HttpUtil.doGet("http://s2.e12e.com:8080/Analytics/", param);
 			}
 		} catch (Exception e) {
 			// 不要报错~~~
+		}
+	}
+
+	public void reConnect() {
+		// 重连
+		System.out.println(PrintUtil.printPrefix() + "尝试重新连接...");
+		for (int i = 0; i < 10; i++) {
+			try {
+				String verifyCode = new JSONObject(this.getVerifyCodeString()).optString("challenge");
+				//登录失败抛出异常
+				doLogin(verifyCode);
+				doActive();
+				System.out.println(PrintUtil.printPrefix() + "第"+(i+1)+"次重新连接成功！");
+				break;
+			} catch (Exception e1) {
+				System.out.println(PrintUtil.printPrefix() + "第"+(i+1)+"次重新连接失败！");
+				System.out.println(PrintUtil.printPrefix() + "10s后重连...");
+				try {
+					Thread.sleep(10*1000);
+				} catch (InterruptedException e) {
+				}
+			}
 		}
 	}
 
